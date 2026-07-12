@@ -1,0 +1,16 @@
+# Cloudflare Pages config for the admin SPA.
+#
+# Build + deploy:
+#   bun run build
+#   wrangler pages deploy            # uses pages_build_output_dir below
+#
+# Or connect the repo in the CF dashboard with build command `bun run build`.
+#
+# Note: all VITE_* variables are *build-time* (baked into the bundle), so set them in the environment
+# that runs `bun run build` — locally via .env, or in the Pages project's build env vars. See README.
+
+name = "caligo-admin"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "dist"
+
+# SPA fallback (/* -> /index.html 200) is provided by public/_redirects, copied into dist on build.

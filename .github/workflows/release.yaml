@@ -1,0 +1,53 @@
+# Publish CaligoExpress (library) + CaligoExpress.Cli (dotnet tool `caligo`) to NuGet.
+#
+# Trigger: push a version tag, e.g.
+#   git tag v1.0.0 && git push origin v1.0.0
+#
+# Auth is keyless (NuGet Trusted Publishing): the job's GitHub OIDC token is exchanged for a
+# one-hour API key via NuGet/login. One-time setup:
+#   1. nuget.org → <your profile> → Trusted Publishing → add a policy:
+#        Repository Owner: argon-chat   Repository: CaligoExpress   Workflow File: release.yaml
+#      (policy owner = the nuget.org user/org that owns the CaligoExpress* packages)
+#   2. Repository secret NUGET_USER = that nuget.org profile name (NOT an email, NOT an api key).
+name: Release (NuGet)
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # GitHub OIDC token for the NuGet login exchange
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Version from tag (v1.2.3 -> 1.2.3)
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      # Tests gate the release — a red suite never ships.
+      - run: dotnet test CaligoExpress.slnx --configuration Release
+
+      - run: dotnet pack src/CaligoExpress --configuration Release -p:Version=$VERSION -o out
+      - run: dotnet pack src/CaligoExpress.Cli --configuration Release -p:Version=$VERSION -o out
+
+      # Exchange the OIDC token for a short-lived (1h) API key — done LAST before the push so it
+      # cannot expire mid-release.
+      - name: NuGet login (OIDC -> temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      # Pushes the .snupkg symbol packages alongside automatically; --skip-duplicate makes re-runs safe.
+      - name: Push to nuget.org
+        run: >
+          dotnet nuget push "out/*.nupkg"
+          --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate

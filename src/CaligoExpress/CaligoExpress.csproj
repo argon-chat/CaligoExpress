@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<IsPackable>true</IsPackable>
+		<PackageId>CaligoExpress</PackageId>
+		<Description>Whole-app update and delivery engine: Ed25519-signed manifests, content-defined chunking with cross-version dedup, transactional install with crash recovery and rollback, region-ordered multi-mirror failover, and an independent self-updating bootstrapper track.</Description>
+		<PackageTags>updater;auto-update;delivery;chunking;cdc;ed25519;installer</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+		<PackageReference Include="DeltaQ.SuffixSorting.SAIS" Version="2.1.0" />
+		<PackageReference Include="Flurl.Http" Version="4.0.2" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.1" />
+		<PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+		<PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+		<PackageReference Include="DeltaQ.BsDiff" Version="2.1.0" />
+		<PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
+	</ItemGroup>
+
+</Project>

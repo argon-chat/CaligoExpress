@@ -1,0 +1,32 @@
+# Control-plane worker. The admin SPA (CaligoExpress.CloudAdmin) calls this API.
+name = "caligo-cloud"
+main = "src/worker.ts"
+compatibility_date = "2025-01-01"
+
+# D1 is the control-plane database. Create it once with:
+#   wrangler d1 create caligo
+# then set the returned database_id below (or substitute it in CI from a secret) and apply the migration:
+#   wrangler d1 migrations apply caligo --remote
+[[d1_databases]]
+binding = "DB"
+database_name = "caligo"
+database_id = "00000000-0000-0000-0000-000000000000" # <- your D1 database id
+
+# Garbage collection + mirror self-heal every 6 hours.
+[triggers]
+crons = ["0 */6 * * *"]
+
+# Secrets (set with `wrangler secret put <NAME>`), never commit them:
+#   PUBLISH_TOKEN   - master bearer token guarding /publish, /promote, /rollback, /config, /gc (all apps)
+#   MIRRORS         - JSON array of S3 mirror configs (see README)
+#   PINNED_PUBKEYS  - JSON map {keyId: base64PublicKey} for release signature verification
+[vars]
+KEEP_PER_CHANNEL = "5"
+# The app served on the legacy un-prefixed routes + root storage layout (all other apps: /apps/<app>).
+DEFAULT_APP = "argon"
+# OIDC SSO for the admin UI (optional — the worker also accepts the PUBLISH_TOKEN / per-app tokens):
+AEGIS_ISSUER = ""
+AEGIS_JWKS = ""
+ADMIN_SCOPE = ""
+# CORS origin of your deployed admin SPA:
+ADMIN_ORIGIN = ""

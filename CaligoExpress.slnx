@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CaligoExpress/CaligoExpress.csproj" />
+    <Project Path="src/CaligoExpress.Cli/CaligoExpress.Cli.csproj" />
+    <Project Path="src/CaligoExpress.Test/CaligoExpress.Test.csproj" />
+  </Folder>
+</Solution>

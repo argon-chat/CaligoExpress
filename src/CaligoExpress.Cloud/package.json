@@ -1,0 +1,26 @@
+{
+  "name": "caligoexpress.cloud",
+  "module": "src/worker.ts",
+  "main": "src/worker.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/local.ts",
+    "start": "bun run src/local.ts",
+    "cf-dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260603.1",
+    "@types/bun": "latest",
+    "wrangler": "^4.97.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "hono": "^4.12.23",
+    "s3mini": "^0.9.5"
+  }
+}

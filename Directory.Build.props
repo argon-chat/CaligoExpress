@@ -1,0 +1,26 @@
+<Project>
+
+  <!-- Shared metadata for every project; packing is opt-in per project (IsPackable=true). -->
+  <PropertyGroup>
+    <!-- CI overrides Version from the git tag (release.yaml: v1.2.3 -> 1.2.3). -->
+    <Version Condition="'$(Version)' == ''">0.0.1-dev</Version>
+    <Authors>Argon Inc. LLC</Authors>
+    <Company>Argon Inc. LLC</Company>
+    <Copyright>Copyright (c) 2026 Argon Inc. LLC</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/argon-chat/CaligoExpress</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/argon-chat/CaligoExpress</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Deterministic, source-linked symbol packages for the published packages. -->
+  <PropertyGroup>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+</Project>

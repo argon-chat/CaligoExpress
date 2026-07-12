@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\CaligoExpress\CaligoExpress.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>caligo</ToolCommandName>
+    <PackageId>CaligoExpress.Cli</PackageId>
+    <RollForward>Major</RollForward>
+    <Description>caligo — CLI for the CaligoExpress update system: project init and Ed25519 keygen, content-defined chunk packing, release signing, and publishing to the control-plane worker (multi-app aware via --app).</Description>
+    <PackageTags>dotnet-tool;cli;updater;delivery;publish</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

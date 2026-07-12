@@ -1,0 +1,47 @@
+# Build + test everything on every push/PR: the .NET library/CLI/tests, the Cloudflare worker
+# (bun test against the in-memory D1 shim), and the admin SPA (typecheck + production build).
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  dotnet:
+    name: dotnet build + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test CaligoExpress.slnx --configuration Release
+      - run: dotnet pack src/CaligoExpress --configuration Release -p:Version=0.0.1-ci -o out
+      - run: dotnet pack src/CaligoExpress.Cli --configuration Release -p:Version=0.0.1-ci -o out
+
+  worker:
+    name: cloud worker (bun)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/CaligoExpress.Cloud
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - run: bunx tsc --noEmit
+
+  admin:
+    name: admin SPA (bun)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/CaligoExpress.CloudAdmin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run build

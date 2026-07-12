@@ -427,3 +427,16 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+## Node / Bun (worker + admin SPA)
+node_modules/
+dist/
+.env
+.env.local
+
+## Local worker state / pack output
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.wrangler/
+out/
