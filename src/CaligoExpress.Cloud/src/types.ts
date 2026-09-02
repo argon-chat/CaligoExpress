@@ -138,6 +138,10 @@ export interface Env {
   DEFAULT_APP?: string;
   /** Optional JSON map {keyId: base64PublicKey} for defense-in-depth release signature checks. */
   PINNED_PUBKEYS?: string;
+  /** "1" → allow publishing to an app that has NO pinned signing keys (dev/local workers only).
+   *  Production leaves this unset: publishes to key-less apps are rejected loudly instead of
+   *  silently skipping signature verification. */
+  ALLOW_UNSIGNED?: string;
   /** JSON array of content-mirror configs — bootstrap default for content S3; admins override in D1. */
   MIRRORS?: string;
   /** Alias of MIRRORS for clarity (content mirrors). */

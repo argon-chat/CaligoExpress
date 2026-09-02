@@ -158,6 +158,42 @@ export function createApp(): Hono<HonoEnv> {
 
 // ── write handlers ─────────────────────────────────────────────────────────────
 
+/**
+ * Signature gate for publishes. Signed delivery is the core security property, so the failure modes are
+ * LOUD instead of silent:
+ *  - no pinned keys for the app → 403 telling the operator to pin the key first (a k1-in-the-wrong-app
+ *    setup mistake used to sail through unverified). Dev workers opt out with ALLOW_UNSIGNED=1.
+ *  - unsigned manifest / unknown keyId → 403 naming the keyIds the app actually has, so a typo'd
+ *    --key-id is diagnosable from the CI log.
+ */
+async function assertSigned(
+  c: Ctx, app: string, manifest: { signature?: { keyId: string; alg: string; sig: string } },
+): Promise<Response | null> {
+  const pinned = await getPinnedKeys(c.env, app, defaultAppOf(c.env));
+
+  if (Object.keys(pinned).length === 0) {
+    if (c.env.ALLOW_UNSIGNED === "1") return null;
+    return c.json({
+      error: `no pinned signing keys for app '${app}' — pin its public key first (admin → Settings → ` +
+        `Trusted signing keys, with the app selected), or set ALLOW_UNSIGNED=1 on a dev worker`,
+    }, 403);
+  }
+
+  if (!manifest.signature) {
+    return c.json({ error: `manifest is unsigned, but app '${app}' has pinned signing keys` }, 403);
+  }
+  if (!pinned[manifest.signature.keyId]) {
+    return c.json({
+      error: `manifest signed with unknown keyId '${manifest.signature.keyId}' — ` +
+        `pinned keys for app '${app}': ${Object.keys(pinned).join(", ")}`,
+    }, 403);
+  }
+  if (!(await verifySignedManifest(manifest, pinned))) {
+    return c.json({ error: "signature verification failed" }, 403);
+  }
+  return null;
+}
+
 /** Rejects a manifest whose `app` field or referenced artifact keys point outside the route's app. */
 function assertAppScope(
   c: Ctx, app: string, manifestApp: string | undefined, keys: (string | undefined)[],
@@ -213,10 +249,8 @@ async function publish(c: Ctx): Promise<Response> {
     throw e;
   }
 
-  const pinned = await getPinnedKeys(c.env, a, defaultAppOf(c.env));
-  if (Object.keys(pinned).length > 0 && !(await verifySignedManifest(release, pinned))) {
-    return c.json({ error: "release signature verification failed" }, 403);
-  }
+  const sigError = await assertSigned(c, a, release);
+  if (sigError) return sigError;
 
   const json = JSON.stringify(release);
   await db.insertRelease(c.env.DB, a, release.channel, release.releaseSeq, release.releaseId, release.createdAt, json);
@@ -257,10 +291,8 @@ async function publishBootstrapper(c: Ctx): Promise<Response> {
     throw e;
   }
 
-  const pinned = await getPinnedKeys(c.env, a, defaultAppOf(c.env));
-  if (Object.keys(pinned).length > 0 && !(await verifySignedManifest(boot, pinned))) {
-    return c.json({ error: "bootstrapper signature verification failed" }, 403);
-  }
+  const sigError = await assertSigned(c, a, boot);
+  if (sigError) return sigError;
 
   const json = JSON.stringify(boot);
   await db.insertBootstrapper(c.env.DB, a, boot.channel, boot.seq, boot.version, boot.createdAt, json);

@@ -19,6 +19,9 @@ One worker serves **many apps** sharing the same D1, mirrors, buckets and hosts:
 - **Per-app state:** channels/releases/bootstrappers/config rows (D1 `app` column), pinned public
   keys, and optional per-app publish tokens (Settings → App publish tokens; each token works only on
   its own app's routes). **Global state:** mirrors, retention, the master `PUBLISH_TOKEN`, SSO.
+- **Signatures are mandatory per app:** a publish to an app with no pinned keys is a 403 telling you
+  to pin the key first (never a silent skip), and a manifest signed with an unknown `keyId` is a 403
+  naming the app's actual key ids. Dev workers can opt out with `ALLOW_UNSIGNED=1`.
 - **GC** partitions the shared bucket by prefix: each app's keep set only prunes its own namespace,
   keys under `apps/<x>/` for an unknown `x` are never touched, and a `gcDryRun` setting (or
   `POST /gc {"dryRun":true}`) reports would-be deletions without deleting — use it when rolling out

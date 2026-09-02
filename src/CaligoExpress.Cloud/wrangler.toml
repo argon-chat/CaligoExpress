@@ -22,6 +22,8 @@ crons = ["0 */6 * * *"]
 #   PINNED_PUBKEYS  - JSON map {keyId: base64PublicKey} for release signature verification
 [vars]
 KEEP_PER_CHANNEL = "5"
+# Publishes to an app with NO pinned signing keys are rejected (pin the key in the admin first).
+# Set ALLOW_UNSIGNED = "1" ONLY on dev workers to accept unsigned publishes.
 # The app served on the legacy un-prefixed routes + root storage layout (all other apps: /apps/<app>).
 DEFAULT_APP = "argon"
 # OIDC SSO for the admin UI (optional — the worker also accepts the PUBLISH_TOKEN / per-app tokens):

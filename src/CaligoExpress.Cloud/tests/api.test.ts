@@ -44,7 +44,8 @@ const put = (path: string, body: unknown, auth = true) => req("PUT", path, body,
 beforeAll(async () => {
   const db = openBunD1(":memory:");
   await ensureSchema(db);
-  env = { DB: db, PUBLISH_TOKEN: TOKEN, MIRRORS: "[]" };
+  // ALLOW_UNSIGNED: the suite publishes unsigned fixtures; strict-mode behavior is tested separately.
+  env = { DB: db, PUBLISH_TOKEN: TOKEN, MIRRORS: "[]", ALLOW_UNSIGNED: "1" };
   app = createApp();
 });
 
@@ -383,6 +384,48 @@ describe("caligo-cloud multi-app", () => {
     const echo = body.apps.find((a) => a.app === "echo");
     expect(echo).toMatchObject({ isDefault: false, hasToken: true });
     expect(body.apps.find((a) => a.app === "argon")).toMatchObject({ isDefault: true });
+  });
+});
+
+describe("signature enforcement", () => {
+  test("publishing to an app with NO pinned keys is rejected unless ALLOW_UNSIGNED=1", async () => {
+    const db = openBunD1(":memory:");
+    await ensureSchema(db, "argon");
+    const strict: Env = { DB: db, PUBLISH_TOKEN: TOKEN, MIRRORS: "[]" };
+
+    // No pinned keys anywhere -> strict worker refuses, naming the fix.
+    const refused = await app.fetch(post("/apps/echo/publish", v2release("echo", "beta", 1)), strict);
+    expect(refused.status).toBe(403);
+    expect(((await refused.json()) as { error: string }).error).toContain("no pinned signing keys for app 'echo'");
+
+    // Same for the default app and the bootstrapper track.
+    expect((await app.fetch(post("/publish", release("beta", 1)), strict)).status).toBe(403);
+
+    // Dev opt-out restores the old behavior.
+    const dev: Env = { ...strict, ALLOW_UNSIGNED: "1" };
+    expect((await app.fetch(post("/apps/echo/publish", v2release("echo", "beta", 1)), dev)).status).toBe(200);
+  });
+
+  test("a typo'd keyId is a 403 that names the app's actual pinned keys", async () => {
+    const db = openBunD1(":memory:");
+    await ensureSchema(db, "argon");
+    const strict: Env = { DB: db, PUBLISH_TOKEN: TOKEN, MIRRORS: "[]" };
+
+    // Pin echo's key under the id it actually has.
+    expect((await app.fetch(put("/apps/echo/admin/settings/pinned-keys", { keys: { k1_echo: "UFVCS0VZ" } }), strict)).status).toBe(200);
+
+    // Unsigned manifest -> explicit refusal.
+    const unsigned = await app.fetch(post("/apps/echo/publish", v2release("echo", "beta", 1)), strict);
+    expect(unsigned.status).toBe(403);
+    expect(((await unsigned.json()) as { error: string }).error).toContain("unsigned");
+
+    // Signed with the wrong keyId -> 403 listing the known ids (the k1 vs k1_zring failure mode).
+    const wrongKey = { ...v2release("echo", "beta", 1), signature: { keyId: "k1", alg: "ed25519", sig: "AA==" } };
+    const res = await app.fetch(post("/apps/echo/publish", wrongKey), strict);
+    expect(res.status).toBe(403);
+    const err = ((await res.json()) as { error: string }).error;
+    expect(err).toContain("unknown keyId 'k1'");
+    expect(err).toContain("k1_echo");
   });
 });
 

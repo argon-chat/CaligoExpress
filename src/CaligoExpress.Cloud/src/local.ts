@@ -18,6 +18,8 @@ const env: Env = {
   MIRRORS: process.env.MIRRORS ?? "[]",
   KEEP_PER_CHANNEL: process.env.KEEP_PER_CHANNEL,
   DEFAULT_APP: process.env.DEFAULT_APP,
+  // Local dev worker: unsigned publishes allowed by default (production requires pinned keys).
+  ALLOW_UNSIGNED: process.env.ALLOW_UNSIGNED ?? "1",
 };
 
 await ensureSchema(database, defaultAppOf(env));
