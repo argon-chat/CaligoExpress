@@ -1,0 +1,33 @@
+# A local S3 mirror for the worker: SeaweedFS with one bucket (`caligo`), signed writes for the worker
+# and the publisher, anonymous reads for clients — like a public CDN bucket.
+#
+#   docker compose -f dev/compose.yaml up -d
+#   MIRRORS="$(cat dev/mirrors.json)" PUBLISH_TOKEN=dev-token bun run start
+#
+# Clients then fetch content from http://localhost:8333/caligo/<key>.
+name: caligo-dev
+
+services:
+  s3:
+    image: chrislusf/seaweedfs:latest
+    command: server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json -master.volumeSizeLimitMB=256 -volume.max=0
+    ports:
+      - "8333:8333"
+    volumes:
+      - ./s3.json:/etc/seaweedfs/s3.json:ro
+      - data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status || exit 1"]
+      interval: 2s
+      retries: 30
+
+  # Creates the bucket once the cluster is up, then exits.
+  bucket:
+    image: chrislusf/seaweedfs:latest
+    depends_on:
+      s3:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c", "echo 's3.bucket.create -name caligo' | weed shell -master=s3:9333 -filer=s3:8888"]
+
+volumes:
+  data:

@@ -1,0 +1,13 @@
+{
+  "identities": [
+    {
+      "name": "caligo",
+      "credentials": [{ "accessKey": "caligo", "secretKey": "caligo-dev-secret" }],
+      "actions": ["Admin", "Read", "List", "Write", "Tagging"]
+    },
+    {
+      "name": "anonymous",
+      "actions": ["Read"]
+    }
+  ]
+}

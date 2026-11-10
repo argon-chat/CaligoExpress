@@ -1,5 +1,6 @@
-# Build + test everything on every push/PR: the .NET library/CLI/tests, the Cloudflare worker
-# (bun test against the in-memory D1 shim), and the admin SPA (typecheck + production build).
+# Build + test everything on every push/PR: the .NET library/CLI/tests, the Rust client, the Cloudflare
+# worker (bun test against the in-memory D1 shim), the admin SPA (typecheck + production build), and an
+# end-to-end run (the .NET CLI publishes to a local worker + S3, the Rust client installs from it).
 name: CI
 
 on:
@@ -19,6 +20,34 @@ jobs:
       - run: dotnet test CaligoExpress.slnx --configuration Release
       - run: dotnet pack src/CaligoExpress --configuration Release -p:Version=0.0.1-ci -o out
       - run: dotnet pack src/CaligoExpress.Cli --configuration Release -p:Version=0.0.1-ci -o out
+
+  rust:
+    name: rust client (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The install lock and the file moves differ per OS.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install stable --profile minimal --component clippy
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked
+
+  e2e:
+    name: end to end (CLI -> worker + S3 -> Rust client)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: oven-sh/setup-bun@v2
+      - run: bash src/CaligoExpress.Cloud/dev/e2e.sh
 
   worker:
     name: cloud worker (bun)

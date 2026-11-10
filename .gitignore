@@ -440,3 +440,5 @@ dist/
 *.sqlite-wal
 .wrangler/
 out/
+
+rust/target/

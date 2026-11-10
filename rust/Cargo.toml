@@ -1,0 +1,8 @@
+[workspace]
+resolver = "3"
+members = ["caligo"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.97"
+license = "MIT"

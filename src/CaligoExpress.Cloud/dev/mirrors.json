@@ -1,0 +1,1 @@
+[{ "name": "local", "endpoint": "http://localhost:8333", "bucket": "caligo", "region": "us-east-1", "accessKeyId": "caligo", "secretAccessKey": "caligo-dev-secret", "publicBaseUrl": "http://localhost:8333/caligo" }]
