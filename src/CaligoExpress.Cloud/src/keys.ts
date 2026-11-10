@@ -57,6 +57,7 @@ export function referencedKeys(release: ReleaseManifest): Set<string> {
   for (const p of release.packages) keys.add(p.manifest.key);
   if (release.bootstrapper) keys.add(release.bootstrapper.full.key); // keep the legacy shim's binary
   if (release.macApp) keys.add(release.macApp.artifact.key); // keep the macOS whole-app bundle zip
+  if (release.linuxApp) keys.add(release.linuxApp.artifact.key); // keep the Linux AppImage
   return keys;
 }
 

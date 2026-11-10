@@ -36,18 +36,21 @@ export function assertVersionProgress(prev: ReleaseManifest, next: ReleaseManife
     if (c > 0) bumped = true;
   }
 
-  // The macOS whole-app payload isn't a package, so a mac-only publish (Windows packages unchanged) bumps
-  // only macApp.version — count that as progress, else routine mac releases would be rejected as "no bump".
-  const prevMac = prev.macApp?.version;
-  const nextMac = next.macApp?.version;
-  if (nextMac !== undefined) {
-    if (prevMac === undefined) {
-      bumped = true; // first mac payload on this channel
-    } else {
-      const cm = compareSemver(nextMac, prevMac);
-      if (cm < 0) throw new ValidationError(`macApp downgrade: ${nextMac} < current ${prevMac}`);
-      if (cm > 0) bumped = true;
+  // The macOS and Linux whole-app payloads aren't packages, so a mac- or Linux-only publish (Windows
+  // packages unchanged) bumps only that payload's version — count it as progress, else routine releases
+  // would be rejected as "no bump".
+  for (const [field, prevVersion, nextVersion] of [
+    ["macApp", prev.macApp?.version, next.macApp?.version],
+    ["linuxApp", prev.linuxApp?.version, next.linuxApp?.version],
+  ] as const) {
+    if (nextVersion === undefined) continue;
+    if (prevVersion === undefined) {
+      bumped = true; // first payload of this platform on the channel
+      continue;
     }
+    const c = compareSemver(nextVersion, prevVersion);
+    if (c < 0) throw new ValidationError(`${field} downgrade: ${nextVersion} < current ${prevVersion}`);
+    if (c > 0) bumped = true;
   }
 
   if (requireBump && !bumped) {

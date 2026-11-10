@@ -89,6 +89,8 @@ export interface ReleaseManifestFull {
   /** macOS whole-app payload + its launch spec (present on mac releases). */
   macApp?: MonolithRef;
   macLaunch?: { bin: string; args: string[]; workingDir?: string };
+  /** Linux whole-app payload, one self-replacing AppImage (present on Linux releases). */
+  linuxApp?: MonolithRef;
 }
 
 // ── live config.json served to clients (GET /config.json) ──

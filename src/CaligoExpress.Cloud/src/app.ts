@@ -233,6 +233,7 @@ async function publish(c: Ctx): Promise<Response> {
     ...(release.packages ?? []).map((p) => p.manifest.key),
     release.bootstrapper?.full.key,
     release.macApp?.artifact.key,
+    release.linuxApp?.artifact.key,
   ]);
   if (scopeError) return scopeError;
 
@@ -413,6 +414,7 @@ async function adminOverview(c: Ctx): Promise<Response> {
         createdAt: m.createdAt,
         packages: m.packages.map((p) => ({ name: p.name, version: p.version })),
         mac: m.macApp ? `${m.macApp.bundleName}@${m.macApp.version}` : null,
+        linux: m.linuxApp ? `${m.linuxApp.bundleName}@${m.linuxApp.version}` : null,
       },
     });
   }
@@ -461,6 +463,7 @@ async function adminReleases(c: Ctx): Promise<Response> {
       packages: m.packages.map((p) => `${p.name}@${p.version}`),
       // The macOS whole-app payload (empty `packages`), so mac releases aren't shown blank.
       mac: m.macApp ? `${m.macApp.bundleName}@${m.macApp.version}` : null,
+      linux: m.linuxApp ? `${m.linuxApp.bundleName}@${m.linuxApp.version}` : null,
     });
   }
   return c.json({ app: a, channel, current: pointer, releases });

@@ -102,6 +102,8 @@ export interface ReleaseManifest {
    *  signed release.json (Windows packages + mac bundle) published from separate CI jobs. */
   macApp?: MonolithRef;
   macLaunch?: LaunchSpec;
+  /** Linux whole-app payload: one AppImage that replaces itself (no bootstrapper, so no launch spec). */
+  linuxApp?: MonolithRef;
 }
 
 export interface MirrorEntry {

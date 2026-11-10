@@ -260,5 +260,5 @@ async function fetchPackageManifest(
 function isPrunableArtifact(localKey: string): boolean {
   // Manifests (config / release.json / bootstrapper.json) are pointers, never pruned as artifacts.
   if (localKey === "config.json" || localKey.endsWith("/release.json") || localKey.endsWith("/bootstrapper.json")) return false;
-  return isChunk(localKey) || localKey.endsWith("/package.json") || localKey.startsWith("bootstrapper/") || localKey.startsWith("macapp/");
+  return isChunk(localKey) || localKey.endsWith("/package.json") || localKey.startsWith("bootstrapper/") || localKey.startsWith("macapp/") || localKey.startsWith("linuxapp/");
 }

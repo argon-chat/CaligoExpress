@@ -41,6 +41,9 @@ public sealed class CdnKeyScheme
 
     /// <summary>The macOS whole-app bundle archive for a version (one content-addressed <c>ditto</c> zip).</summary>
     public string MacApp(string version) => $"{Prefix}macapp/{version}/app.zip";
+
+    /// <summary>The Linux whole-app AppImage for a version (one content-addressed file).</summary>
+    public string LinuxApp(string version) => $"{Prefix}linuxapp/{version}/app.AppImage";
 }
 
 /// <summary>The legacy root-layout key scheme (static shorthand for <see cref="CdnKeyScheme.Root"/>).</summary>
@@ -65,4 +68,6 @@ public static class CdnKeys
     public static string BootstrapperMac(string version) => CdnKeyScheme.Root.BootstrapperMac(version);
 
     public static string MacApp(string version) => CdnKeyScheme.Root.MacApp(version);
+
+    public static string LinuxApp(string version) => CdnKeyScheme.Root.LinuxApp(version);
 }

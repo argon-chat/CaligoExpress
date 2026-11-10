@@ -68,15 +68,17 @@ internal static class PublishCommand
             ok &= await PublishCoreAsync(http, s3Http, worker, channel, keyId, priv, a, coreSrc);
         if (a.Get("mac-app") is { } macZip)
             ok &= await PublishMacAppAsync(http, s3Http, worker, channel, keyId, priv, a, macZip);
+        if (a.Get("linux-app") is { } appImage)
+            ok &= await PublishLinuxAppAsync(http, s3Http, worker, channel, keyId, priv, a, appImage);
         // Generic public download: upload an arbitrary file to a mirror-root key (e.g. the human-facing
         // first-install ArgonChat.dmg / ArgonChat_Setup.exe). Root keys aren't GC-prunable, so they persist.
         if (a.Get("upload-file") is { } upFile && a.Get("upload-key") is { } upKey)
             ok &= await PublishPublicFileAsync(http, s3Http, worker, upFile, upKey);
 
         if (a.Get("boot-bin") is null && a.Get("mac-boot-bin") is null && a.Get("core-src") is null
-            && a.Get("mac-app") is null && a.Get("upload-file") is null)
+            && a.Get("mac-app") is null && a.Get("linux-app") is null && a.Get("upload-file") is null)
         {
-            Log("nothing to publish — pass --boot-bin, --mac-boot-bin, --core-src, --mac-app, and/or --upload-file");
+            Log("nothing to publish — pass --boot-bin, --mac-boot-bin, --core-src, --mac-app, --linux-app, and/or --upload-file");
             return 1;
         }
         return ok ? 0 : 1;
@@ -197,7 +199,8 @@ internal static class PublishCommand
         // release.json from separate CI jobs, so a core publish must not clobber the mac fields (and vice versa).
         var release = new ReleaseManifest(
             1, channel, seq, releaseId, DateTimeOffset.UtcNow.ToString("o"), packages, launch, bootShim,
-            Signature: null, MacApp: current?.MacApp, MacLaunch: current?.MacLaunch, App: AppId);
+            Signature: null, MacApp: current?.MacApp, MacLaunch: current?.MacLaunch, LinuxApp: current?.LinuxApp,
+            App: AppId);
         var signed = ManifestTrust.Sign(release, keyId, priv);
         Log($"release {releaseId}: packages [{string.Join(", ", packages.Select(p => $"{p.Name}@{p.Version}"))}]");
 
@@ -246,7 +249,7 @@ internal static class PublishCommand
         var releaseId = $"{channel}-mac-{version}-{seq}";
         var release = new ReleaseManifest(
             1, channel, seq, releaseId, DateTimeOffset.UtcNow.ToString("o"), packages, current?.Launch, bootShim,
-            Signature: null, MacApp: macApp, MacLaunch: macLaunch, App: AppId);
+            Signature: null, MacApp: macApp, MacLaunch: macLaunch, LinuxApp: current?.LinuxApp, App: AppId);
         var signed = ManifestTrust.Sign(release, keyId, priv);
 
         Log("uploading mac app bundle artifact ...");
@@ -256,6 +259,42 @@ internal static class PublishCommand
         var json = CaligoJson.Serialize(signed);
         var body = a.Flag("force") ? $"{{\"release\":{json},\"force\":true}}" : json;
         return await PostAsync(http, $"{worker}/publish", body, $"{releaseId} live on {channel} (mac)");
+    }
+
+    // ── Linux whole-app track ────────────────────────────────────────────────────
+    // Publishes an AppImage as the channel's Linux payload. Like the mac bundle it ships whole: the running
+    // AppImage downloads it, checks its hash and renames it over itself (there is no Linux bootstrapper).
+    // The Windows packages and the mac fields on the release are preserved.
+    //   caligo publish --worker URL --token TOK --channel live --key k1.key --key-id k1 \
+    //       --linux-app App-x86_64.AppImage --linux-version V [--force]
+    private static async Task<bool> PublishLinuxAppAsync(
+        HttpClient http, HttpClient s3, string worker, string channel, string keyId, byte[] priv, Args a, string appImage)
+    {
+        var version = a.Req("linux-version");
+        var bytes = await File.ReadAllBytesAsync(appImage);
+        var key = Keys.LinuxApp(version);
+
+        var current = await FetchCurrentReleaseAsync(http, worker, channel);
+        var seq = await NextSeqAsync(http, $"{worker}/admin/releases/{channel}", "releases");
+        Log($"linux app: {version} ({Size(bytes.Length)}) <- {appImage}, seq {seq}");
+
+        var linuxApp = new MonolithRef(Artifact(key, bytes), Path.GetFileName(appImage), version);
+        var packages = current?.Packages.ToList() ?? [];
+        var bootShim = await FetchBootstrapperShimAsync(http, worker, channel) ?? current?.Bootstrapper;
+
+        var releaseId = $"{channel}-linux-{version}-{seq}";
+        var release = new ReleaseManifest(
+            1, channel, seq, releaseId, DateTimeOffset.UtcNow.ToString("o"), packages, current?.Launch, bootShim,
+            Signature: null, MacApp: current?.MacApp, MacLaunch: current?.MacLaunch, LinuxApp: linuxApp, App: AppId);
+        var signed = ManifestTrust.Sign(release, keyId, priv);
+
+        Log("uploading linux AppImage artifact ...");
+        var docs = new Dictionary<string, byte[]>(StringComparer.Ordinal) { [key] = bytes };
+        await PresignUploadAsync(http, s3, worker, docs, skipExisting: false, logEachKey: true);
+
+        var json = CaligoJson.Serialize(signed);
+        var body = a.Flag("force") ? $"{{\"release\":{json},\"force\":true}}" : json;
+        return await PostAsync(http, $"{worker}/publish", body, $"{releaseId} live on {channel} (linux)");
     }
 
     // ── generic public-file upload ────────────────────────────────────────────────

@@ -123,6 +123,10 @@ pub struct ReleaseManifest {
     pub mac_app: Option<MonolithRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mac_launch: Option<LaunchSpec>,
+    /// The Linux app: one AppImage, which replaces itself (`appimage.rs`); `bundle_name` is its file
+    /// name. There is no Linux bootstrapper and so no launch spec.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub linux_app: Option<MonolithRef>,
     /// The app slug on a multi-app worker, inside the signed payload.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub app: Option<String>,

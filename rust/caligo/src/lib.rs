@@ -9,6 +9,8 @@
 //! Everything here blocks: run it on a worker thread. Long operations take a [`Cancel`] and report
 //! [`UpdateProgress`] through a callback.
 
+#[cfg(unix)]
+pub mod appimage;
 pub mod bootstrap;
 pub mod chunk;
 pub mod client;

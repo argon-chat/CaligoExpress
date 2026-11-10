@@ -94,6 +94,21 @@ describe("caligo-cloud api", () => {
     expect((await app.fetch(post("/publish", { release: mk(3, "1.1.0"), force: true }), env)).status).toBe(200); // forced
   });
 
+  test("a Linux-only publish bumps by its AppImage version, and never goes back", async () => {
+    const mk = (seq: number, ver: string): ReleaseManifest => ({
+      ...release("linux", seq, [pkg("core", "1.0.0")]),
+      linuxApp: { artifact: { key: `linuxapp/${ver}/app.AppImage`, hash: "h", size: 1 }, bundleName: "App.AppImage", version: ver },
+    });
+    expect((await app.fetch(post("/publish", mk(1, "3.1.3.80")), env)).status).toBe(200); // first Linux payload
+    expect((await app.fetch(post("/publish", mk(2, "3.1.3.80")), env)).status).toBe(409); // no bump
+    expect((await app.fetch(post("/publish", mk(2, "3.1.3.79")), env)).status).toBe(409); // downgrade
+    expect((await app.fetch(post("/publish", mk(2, "3.1.3.81")), env)).status).toBe(200); // bumped
+    // A foreign-app key in the Linux payload is out of scope, as for the other artifacts.
+    const stray = mk(3, "3.1.3.82");
+    stray.linuxApp!.artifact.key = "apps/echo/linuxapp/3.1.3.82/app.AppImage";
+    expect((await app.fetch(post("/publish", stray), env)).status).toBe(409);
+  });
+
   test("publish orders 4-part GitVersion versions by the 4th component", async () => {
     const mk = (seq: number, ver: string): ReleaseManifest => release("v4", seq, [pkg("core", ver)]);
     expect((await app.fetch(post("/publish", mk(1, "2.16.1.221")), env)).status).toBe(200);

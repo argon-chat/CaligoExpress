@@ -83,6 +83,10 @@ public sealed record ReleaseManifest(
     // untouched; a mac client reads MacApp/MacLaunch and ignores Packages (the chunked path).
     [property: JsonPropertyName("macApp")] MonolithRef? MacApp = null,
     [property: JsonPropertyName("macLaunch")] LaunchSpec? MacLaunch = null,
+    // Linux whole-app delivery: one AppImage that replaces itself in place (there is no Linux
+    // bootstrapper, so no launch spec). BundleName is the image's file name. Null when Linux hasn't
+    // published; Windows and mac clients ignore it.
+    [property: JsonPropertyName("linuxApp")] MonolithRef? LinuxApp = null,
     // App slug for multi-app workers; inside the signed payload so a manifest can't be replayed into
     // another app's namespace. Null (omitted) on legacy default-app manifests — bytes unchanged.
     [property: JsonPropertyName("app")] string? App = null);
