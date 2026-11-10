@@ -128,15 +128,31 @@ pub fn needs_work(paths: &InstallPaths, release: &ReleaseManifest, bootstrapper:
     Ok(plan(release, &current, &current.bootstrapper_version, None)?.has_work())
 }
 
-/// A different version that is not older (when both parse as SemVer; otherwise any difference).
+/// A different version that is not older, when both parse as SemVer or both are plain dotted
+/// numbers (a Windows file version such as `3.1.2.57`); otherwise any difference.
 pub fn needs_bootstrapper_update(installed: &str, target: &str) -> bool {
     if installed.eq_ignore_ascii_case(target) {
         return false;
     }
-    match (PackageVersion::parse(installed), PackageVersion::parse(target)) {
+    if let (Some(i), Some(t)) = (PackageVersion::parse(installed), PackageVersion::parse(target)) {
+        return t > i;
+    }
+    match (dotted(installed), dotted(target)) {
         (Some(i), Some(t)) => t > i,
         _ => true,
     }
+}
+
+/// `1.2.3.4` as numbers, missing components as 0, so `1.2` equals `1.2.0.0`.
+fn dotted(version: &str) -> Option<[u64; 4]> {
+    let mut parts = [0; 4];
+    for (i, part) in version.trim().split('.').enumerate() {
+        if i == 4 || part.is_empty() || !part.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        parts[i] = part.parse().ok()?;
+    }
+    Some(parts)
 }
 
 #[cfg(test)]
@@ -150,5 +166,14 @@ mod tests {
         assert!(!needs_bootstrapper_update("2.30.1", "2.30.1"));
         assert!(!needs_bootstrapper_update("2.31.0", "2.30.1"));
         assert!(needs_bootstrapper_update("weird", "2.30.1"));
+    }
+
+    #[test]
+    fn four_part_file_versions_are_ordered_numerically() {
+        assert!(needs_bootstrapper_update("3.1.2.9", "3.1.2.10"));
+        assert!(!needs_bootstrapper_update("3.1.2.10", "3.1.2.9"));
+        assert!(needs_bootstrapper_update("3.1.2.57", "3.1.3.0"));
+        assert!(!needs_bootstrapper_update("3.1.2.0", "3.1.2"));
+        assert!(needs_bootstrapper_update("", "3.1.2.57"));
     }
 }
