@@ -12,7 +12,8 @@ use caligo::paths::InstallPaths;
 use caligo::state::StateStore;
 use caligo::txn::{StagingArea, TransactionJournal, TxnOp, TxnOpKind, TxnStatus, commit, new_txn_id, recover_pending};
 use caligo::update::{UpdateEngine, UpdateOptions, UpdateOutcome};
-use caligo::{Cancel, Error, Result, chunk};
+use caligo::bootstrap::needs_work;
+use caligo::{Cancel, Error, IS_MAC, Result, chunk};
 
 const SEED: [u8; 32] = [42; 32];
 const CHUNK: usize = 4096;
@@ -152,7 +153,12 @@ fn an_update_downloads_only_changed_chunks_removes_dropped_files_and_runs_hooks(
         &[("App.exe", big.clone()), ("res/a.txt", b"alpha".to_vec()), ("res/old.txt", b"old".to_vec())],
         vec![],
     );
-    assert_eq!(run(&f, &release(1, vec![v1])).unwrap(), UpdateOutcome::Updated);
+    let r1 = release(1, vec![v1]);
+    // The whole-app (macOS) path has its own manifests; this fixture publishes packages only.
+    let needs_work = |r: &ReleaseManifest| !IS_MAC && needs_work(&f.paths, r, None).unwrap();
+    assert!(IS_MAC || needs_work(&r1), "a fresh root needs everything");
+    assert_eq!(run(&f, &r1).unwrap(), UpdateOutcome::Updated);
+    assert!(!needs_work(&r1), "installed is up to date");
     let app = f.paths.root().join("app");
     assert_eq!(fs::read(app.join("App.exe")).unwrap(), big);
     assert_eq!(fs::read(app.join("res/old.txt")).unwrap(), b"old");
@@ -167,7 +173,9 @@ fn an_update_downloads_only_changed_chunks_removes_dropped_files_and_runs_hooks(
         &[("App.exe", big2.clone()), ("res/a.txt", b"alpha".to_vec()), ("res/new.txt", b"new".to_vec())],
         vec![HookDef { id: "v".into(), kind: "emit".into(), query: Some("#version".into()), origin: None, target: Some("version.txt".into()), override_: false }],
     );
-    assert_eq!(run(&f, &release(2, vec![v2.clone()])).unwrap(), UpdateOutcome::Updated);
+    let r2 = release(2, vec![v2.clone()]);
+    assert!(IS_MAC || needs_work(&r2), "a new package version is work");
+    assert_eq!(run(&f, &r2).unwrap(), UpdateOutcome::Updated);
     assert_eq!(fs::read(app.join("App.exe")).unwrap(), big2);
     assert!(!app.join("res/old.txt").exists());
     assert_eq!(fs::read(app.join("res/new.txt")).unwrap(), b"new");

@@ -8,14 +8,15 @@ use crate::content::ContentSource;
 use crate::keys::KeyScheme;
 use crate::lock::InstallLock;
 use crate::manifest::{BootstrapperManifest, ReleaseManifest};
-use crate::monolith::{ArchiveExtractor, Ditto, MonolithInstaller};
+use crate::monolith::{ArchiveExtractor, Ditto, MonolithInstaller, is_installed};
 use crate::paths::InstallPaths;
+use crate::planner::plan;
 use crate::self_update::SelfUpdater;
 use crate::state::StateStore;
 use crate::txn::recover_pending;
 use crate::update::{UpdateEngine, UpdateOptions, UpdateOutcome};
 use crate::version::PackageVersion;
-use crate::{Cancel, IS_MAC, Progress, Result};
+use crate::{Cancel, Error, IS_MAC, Progress, Result};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BootstrapOutcome {
@@ -104,6 +105,27 @@ impl BootstrapFlow<'_> {
             UpdateOutcome::UpToDate => BootstrapOutcome::UpToDate,
         })
     }
+}
+
+/// Whether [`BootstrapFlow::run`] would change anything: a self-update of this platform's
+/// bootstrapper, or a package (on macOS, the whole app) to install, update or remove. Reads the
+/// state without the install lock, so it is a hint: what a launcher asks before it shows any UI,
+/// and what a running app asks to offer an update.
+pub fn needs_work(paths: &InstallPaths, release: &ReleaseManifest, bootstrapper: Option<&BootstrapperManifest>) -> Result<bool> {
+    let current = StateStore::new(paths.clone()).read();
+    if let Some(boot) = bootstrapper
+        && boot.platform_artifact().is_some()
+        && needs_bootstrapper_update(&current.bootstrapper_version, &boot.version)
+    {
+        return Ok(true);
+    }
+    if IS_MAC {
+        let (Some(mac), Some(launch)) = (&release.mac_app, &release.mac_launch) else {
+            return Err(Error::other(format!("release {} has no macApp artifact or macLaunch spec", release.release_id)));
+        };
+        return Ok(!is_installed(&current, mac, &paths.under_root(&launch.bin)?));
+    }
+    Ok(plan(release, &current, &current.bootstrapper_version, None)?.has_work())
 }
 
 /// A different version that is not older (when both parse as SemVer; otherwise any difference).

@@ -134,7 +134,7 @@ impl MonolithInstaller<'_> {
 }
 
 /// The recorded version and artifact hash match and the bundle is on disk.
-fn is_installed(current: &LocalInstallState, mac: &MonolithRef, app_dir: &Path) -> bool {
+pub(crate) fn is_installed(current: &LocalInstallState, mac: &MonolithRef, app_dir: &Path) -> bool {
     current.packages.get(MAC_APP_PACKAGE).is_some_and(|p| {
         p.version.eq_ignore_ascii_case(&mac.version) && p.manifest_hash.eq_ignore_ascii_case(&mac.artifact.hash)
     }) && app_dir.is_dir()
