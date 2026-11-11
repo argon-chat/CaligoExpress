@@ -19,8 +19,13 @@ using CaligoExpress.Publishing;
 ///
 ///   caligo publish --worker URL --token TOK --channel beta --key k1.key --key-id k1 \
 ///       [--app my-app] \
-///       [--core-src DIR --core-version V --launch-bin app/ArgonChat.exe --name core] \
+///       [--core-src DIR --core-version V --launch-bin app/ArgonChat.exe --name core [--chunk-avg-kib N]] \
 ///       [--boot-bin FILE --boot-version V [--boot-public-key KEY]] [--force]
+///
+/// --chunk-avg-kib: the average chunk size (a power of two, half to twice that per chunk), for a core
+/// shipped as many files rather than one: smaller chunks re-download less of a file that changed in part.
+/// Keep it the same from release to release — another size gives other boundaries, and the next update
+/// downloads everything once. Default: ChunkerOptions.Default.
 /// </summary>
 internal static class PublishCommand
 {
@@ -163,7 +168,15 @@ internal static class PublishCommand
             : $"app release: replacing {name}, reuse {current.Packages.Count} packages, seq {seq}");
 
         Log($"core: chunking {name} {version} from {coreSrc} ...");
-        var packed = Packager.Pack(coreSrc, name, version, targetRoot);
+        ChunkerOptions? chunker = null;
+        if (a.Get("chunk-avg-kib") is { } avgText)
+        {
+            if (!int.TryParse(avgText, out var avgKib) || avgKib < 64 || avgKib > 64 * 1024 || (avgKib & (avgKib - 1)) != 0)
+                throw new ArgumentException("--chunk-avg-kib must be a power of two from 64 to 65536");
+            chunker = new ChunkerOptions(avgKib * 512, avgKib * 1024, avgKib * 2048);
+            Log($"core: chunks of ~{avgKib} KiB");
+        }
+        var packed = Packager.Pack(coreSrc, name, version, targetRoot, chunker: chunker);
         var chunkBytes = packed.Chunks.Values.Sum(b => (long)b.Length);
         Log($"  {packed.Manifest.Files.Count} files, {packed.Chunks.Count} unique chunks ({Size(chunkBytes)})");
 
