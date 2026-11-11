@@ -160,7 +160,8 @@ onMounted(load);
           <div class="mt-2 flex flex-wrap gap-1.5">
             <span v-for="p in r.packages" :key="p" class="chip">{{ p }}</span>
             <span v-if="r.mac" class="chip chip-info">mac {{ r.mac }}</span>
-            <span v-if="!r.packages.length && !r.mac" class="text-xs text-ink-faint">no payload</span>
+            <span v-if="r.linux" class="chip chip-info">linux {{ r.linux }}</span>
+            <span v-if="!r.packages.length && !r.mac && !r.linux" class="text-xs text-ink-faint">no payload</span>
           </div>
 
           <!-- Expanded manifest -->
@@ -194,6 +195,11 @@ onMounted(load);
                   <span class="text-ink-faint">· launch {{ openDetail.macLaunch?.bin ?? "—" }}</span>
                 </div>
                 <div class="font-mono text-ink-faint break-all mt-1">{{ openDetail.macApp.artifact.key }}</div>
+              </div>
+              <div v-if="openDetail.linuxApp" class="md:col-span-2">
+                <div class="lbl mb-1">Linux payload — self-replacing AppImage</div>
+                <div class="font-mono">{{ openDetail.linuxApp.bundleName }}@{{ openDetail.linuxApp.version }}</div>
+                <div class="font-mono text-ink-faint break-all mt-1">{{ openDetail.linuxApp.artifact.key }}</div>
               </div>
             </div>
           </div>

@@ -14,6 +14,8 @@ export interface OverviewRelease {
   packages: { name: string; version: string }[];
   /** macOS whole-app payload "bundle@version" (null on Windows releases). */
   mac?: string | null;
+  /** Linux AppImage "bundle@version" (null on releases without one). */
+  linux?: string | null;
 }
 
 export interface OverviewChannel {
@@ -33,6 +35,8 @@ export interface ReleaseListItem {
   packages: string[];
   /** macOS whole-app payload "bundle@version" (null on Windows releases). */
   mac?: string | null;
+  /** Linux AppImage "bundle@version" (null on releases without one). */
+  linux?: string | null;
 }
 
 export interface ReleasesResponse {

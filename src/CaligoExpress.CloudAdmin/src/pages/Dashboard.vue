@@ -161,6 +161,7 @@ onMounted(load);
         <div class="mt-3 flex flex-wrap gap-1.5">
           <span v-for="p in c.release.packages" :key="p.name" class="chip">{{ p.name }}@{{ p.version }}</span>
           <span v-if="c.release.mac" class="chip chip-info">mac {{ c.release.mac }}</span>
+          <span v-if="c.release.linux" class="chip chip-info">linux {{ c.release.linux }}</span>
         </div>
       </template>
       <div v-else class="mt-3 text-[13px] text-ink-faint">Nothing published yet</div>
